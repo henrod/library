@@ -37,7 +37,7 @@
         "parameters": [
           {
             "name": "name",
-            "description": "The field will contain name of the resource requested, for example:\n\"shelves/shelf1/books/book2\"",
+            "description": "Required. The field will contain name of the resource requested.\nIt must follow pattern: \"shelves/shelf1/books/book1\"",
             "in": "path",
             "required": true,
             "type": "string",
@@ -70,7 +70,7 @@
         "parameters": [
           {
             "name": "parent",
-            "description": "Required. The parent resource name, for example, \"shelves/shelf1\".",
+            "description": "Required. The parent resource name.\nIt must follow pattern: \"shelves/shelf1\"",
             "in": "path",
             "required": true,
             "type": "string",
@@ -90,6 +90,46 @@
             "in": "query",
             "required": false,
             "type": "string"
+          }
+        ],
+        "tags": [
+          "LibraryService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a book in a shelf.",
+        "operationId": "LibraryService_CreateBook",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Book"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "parent",
+            "description": "Required. The parent resource name where the book is to be created.\nIt must follow pattern: \"shelves/shelf1\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "shelves/[^/]+"
+          },
+          {
+            "name": "body",
+            "description": "Required. The book resource to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Book"
+            }
           }
         ],
         "tags": [
@@ -129,17 +169,13 @@
     "v1Book": {
       "type": "object",
       "properties": {
-        "isbn": {
+        "name": {
           "type": "string",
-          "title": "A non-empty value.\nHas the ISBN format: https://en.wikipedia.org/wiki/International_Standard_Book_Number"
-        },
-        "title": {
-          "type": "string",
-          "description": "A non-empty value.\nMust have less than 255 characters."
+          "description": "Required. It must have less than 255 characters."
         },
         "author": {
           "type": "string",
-          "description": "A non-empty value.\nMust have less than 255 characters."
+          "description": "Required. It must have less than 255 characters."
         },
         "createTime": {
           "type": "string",

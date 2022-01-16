@@ -3,13 +3,14 @@ package api
 import (
 	"errors"
 
+	domainErrors "github.com/Henrod/library/domain/errors"
+	"github.com/golang/protobuf/proto"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	domainErrors "github.com/Henrod/library/domain/errors"
 )
 
-func ToGRPCError(err error) error {
+func ToGRPCError(err error, details ...proto.Message) error {
 	if err == nil {
 		return nil
 	}
@@ -18,7 +19,12 @@ func ToGRPCError(err error) error {
 
 	notFoundError := &domainErrors.NotFoundError{Details: ""}
 	if errors.As(err, notFoundError) {
-		grpcError = status.Error(codes.NotFound, "resource not found")
+		grpcError = withDetails(codes.NotFound, "resource not found", details...)
+	}
+
+	alreadyExistsError := &domainErrors.AlreadyExistsError{Details: ""}
+	if errors.As(err, alreadyExistsError) {
+		grpcError = withDetails(codes.AlreadyExists, "resource already exists", details...)
 	}
 
 	if grpcError == nil {
@@ -26,4 +32,15 @@ func ToGRPCError(err error) error {
 	}
 
 	return grpcError
+}
+
+func withDetails(code codes.Code, msg string, details ...proto.Message) error {
+	errStatus := status.New(code, msg)
+	detailedStatus, err := errStatus.WithDetails(details...)
+	if err != nil {
+		zap.S().With(zap.Error(err)).Error("failed to add details to error, skipping them")
+		detailedStatus = errStatus
+	}
+
+	return detailedStatus.Err() //nolint:wrapcheck
 }

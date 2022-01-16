@@ -28,7 +28,7 @@ func (g *GetBookDomain) GetBook(ctx context.Context, shelfName, bookName string)
 	}
 
 	if book == nil {
-		err := errors.NotFoundError{
+		err = errors.NotFoundError{
 			Details: fmt.Sprintf("book %s at shelf %s not found", shelfName, bookName),
 		}
 
@@ -36,8 +36,7 @@ func (g *GetBookDomain) GetBook(ctx context.Context, shelfName, bookName string)
 	}
 
 	return &entities.Book{
-		ISBN:       book.ISBN,
-		Title:      book.Title,
+		Name:       book.Name,
 		Author:     book.Author,
 		CreateTime: book.CreateTime,
 		UpdateTime: book.UpdateTime,

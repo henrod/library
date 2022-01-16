@@ -16,11 +16,10 @@ type Shelf struct {
 }
 
 type Book struct {
-	ShelfName  string
+	ShelfName  string `pg:",pk"`
 	Shelf      *Shelf `pg:"rel:has-one"`
-	ISBN       string `pg:",pk"`
+	Name       string `pg:",pk"`
 	Author     string
-	Title      string
 	CreateTime time.Time
 	UpdateTime time.Time
 }
@@ -40,8 +39,7 @@ func (g *Gateway) ListBooks(ctx context.Context, shelfName string, pageSize, pag
 	eBooks := make([]*entities.Book, len(books))
 	for i, book := range books {
 		eBooks[i] = &entities.Book{
-			ISBN:       book.ISBN,
-			Title:      book.Title,
+			Name:       book.Name,
 			Author:     book.Author,
 			CreateTime: book.CreateTime,
 			UpdateTime: book.UpdateTime,
@@ -64,12 +62,14 @@ func (g *Gateway) CountBooks(ctx context.Context, shelfName string) (int, error)
 	return count, nil
 }
 
-func (g *Gateway) GetBook(ctx context.Context, shelfName, bookISBN string) (*entities.Book, error) {
+// GetBook returns book of name from shelf.
+// If book not found, returns nil book and nil error.
+func (g *Gateway) GetBook(ctx context.Context, shelfName, bookName string) (*entities.Book, error) {
 	book := new(Book)
 	err := g.db.ModelContext(ctx, book).
 		Relation("Shelf").
 		Where("book.shelf_name = ?", shelfName).
-		Where("book.isbn = ?", bookISBN).
+		Where("book.name = ?", bookName).
 		Select()
 	if errors.Is(err, pg.ErrNoRows) {
 		return nil, nil
@@ -79,8 +79,37 @@ func (g *Gateway) GetBook(ctx context.Context, shelfName, bookISBN string) (*ent
 	}
 
 	return &entities.Book{
-		ISBN:       book.ISBN,
-		Title:      book.Title,
+		Name:       book.Name,
+		Author:     book.Author,
+		CreateTime: book.CreateTime,
+		UpdateTime: book.UpdateTime,
+	}, nil
+}
+
+func (g *Gateway) CreateBook(ctx context.Context, shelfName string, eBook *entities.Book) (*entities.Book, error) {
+	now := time.Now()
+
+	book := &Book{
+		ShelfName:  shelfName,
+		Shelf:      nil,
+		Name:       eBook.Name,
+		Author:     eBook.Author,
+		CreateTime: now,
+		UpdateTime: now,
+	}
+
+	_, err := g.db.ModelContext(ctx, book).Insert()
+	if err != nil {
+		var pgErr pg.Error
+		if errors.As(err, &pgErr) && pgErr.IntegrityViolation() {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("failed to insert book in postgres: %w", err)
+	}
+
+	return &entities.Book{
+		Name:       book.Name,
 		Author:     book.Author,
 		CreateTime: book.CreateTime,
 		UpdateTime: book.UpdateTime,

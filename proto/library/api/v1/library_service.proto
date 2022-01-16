@@ -23,10 +23,19 @@ service LibraryService {
       get: "/v1/{name=shelves/*/books/*}"
     };
   }
+
+  // Creates a book in a shelf.
+  rpc CreateBook(CreateBookRequest) returns (Book) {
+    option (google.api.http) = {
+      post: "/v1/{parent=shelves/*}/books"
+      body: "book"
+    };
+  }
 }
 
 message ListBooksRequest {
-  // Required. The parent resource name, for example, "shelves/shelf1".
+  // Required. The parent resource name.
+  // It must follow pattern: "shelves/shelf1"
   string parent = 1;
 
   // The maximum number of items to return.
@@ -49,28 +58,31 @@ message ListBooksResponse {
 }
 
 message GetBookRequest {
-  // The field will contain name of the resource requested, for example:
-  // "shelves/shelf1/books/book2"
+  // Required. The field will contain name of the resource requested.
+  // It must follow pattern: "shelves/shelf1/books/book1"
   string name = 1;
 }
 
+message CreateBookRequest {
+  // Required. The parent resource name where the book is to be created.
+  // It must follow pattern: "shelves/shelf1"
+  string parent = 1;
+
+  // Required. The book resource to create.
+  Book book = 2;
+}
+
 message Book {
-  // A non-empty value.
-  // Has the ISBN format: https://en.wikipedia.org/wiki/International_Standard_Book_Number
-  string isbn = 1;
+  // Required. It must have less than 255 characters.
+  string name = 1;
 
-  // A non-empty value.
-  // Must have less than 255 characters.
-  string title = 2;
-
-  // A non-empty value.
-  // Must have less than 255 characters.
-  string author = 3;
+  // Required. It must have less than 255 characters.
+  string author = 2;
 
   // Output only. Time when book was added into the library.
-  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Time when book was last updated in the library.
   // Equal to create_time if create request.
-  google.protobuf.Timestamp update_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

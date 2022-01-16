@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/Henrod/library/domain/entities"
 
 	"github.com/Henrod/library/service/api"
 
@@ -19,20 +22,23 @@ import (
 )
 
 type LibraryService struct {
-	listBooks *books.ListBooksDomain
-	getBook   *books.GetBookDomain
-	log       *zap.SugaredLogger
+	listBooks  *books.ListBooksDomain
+	getBook    *books.GetBookDomain
+	createBook *books.CreateBookDomain
+	log        *zap.SugaredLogger
 }
 
 func NewLibraryService(
 	log *zap.SugaredLogger,
 	listBooks *books.ListBooksDomain,
 	getBook *books.GetBookDomain,
+	createBook *books.CreateBookDomain,
 ) *LibraryService {
 	return &LibraryService{
-		log:       log,
-		listBooks: listBooks,
-		getBook:   getBook,
+		log:        log,
+		listBooks:  listBooks,
+		getBook:    getBook,
+		createBook: createBook,
 	}
 }
 
@@ -63,19 +69,13 @@ func (l *LibraryService) ListBooks(ctx context.Context, request *v1.ListBooksReq
 		nextPageToken = getNextIntPageToken(pageOffset + 1)
 	}
 
-	rBooks := make([]*v1.Book, len(eBooks))
-	for i, eBook := range eBooks {
-		rBooks[i] = &v1.Book{
-			Isbn:       eBook.ISBN,
-			Title:      eBook.Title,
-			Author:     eBook.Author,
-			CreateTime: timestamppb.New(eBook.CreateTime),
-			UpdateTime: timestamppb.New(eBook.UpdateTime),
-		}
+	pBooks := make([]*v1.Book, len(eBooks))
+	for i, book := range eBooks {
+		pBooks[i] = toProtoBook(book)
 	}
 
 	return &v1.ListBooksResponse{
-		Books:         rBooks,
+		Books:         pBooks,
 		NextPageToken: nextPageToken,
 	}, nil
 }
@@ -98,11 +98,40 @@ func (l *LibraryService) GetBook(ctx context.Context, request *v1.GetBookRequest
 		return nil, api.ToGRPCError(err) //nolint:wrapcheck
 	}
 
+	return toProtoBook(book), nil
+}
+
+func (l *LibraryService) CreateBook(ctx context.Context, request *v1.CreateBookRequest) (*v1.Book, error) {
+	parent := strings.Split(request.GetParent(), "/")
+	if len(parent) != 2 {
+		err := status.Errorf(codes.InvalidArgument, "parent must be of format 'shelves/*'")
+
+		return nil, fmt.Errorf("failed to get parent: %w", err)
+	}
+
+	shelfName := parent[1]
+	book := &entities.Book{
+		Name:       request.GetBook().GetName(),
+		Author:     request.GetBook().GetAuthor(),
+		CreateTime: time.Time{},
+		UpdateTime: time.Time{},
+	}
+
+	book, err := l.createBook.CreateBook(ctx, shelfName, book)
+	if err != nil {
+		l.log.With(zap.Error(err)).Error("failed to create book in domain")
+
+		return nil, api.ToGRPCError(err) //nolint:wrapcheck
+	}
+
+	return toProtoBook(book), nil
+}
+
+func toProtoBook(book *entities.Book) *v1.Book {
 	return &v1.Book{
-		Isbn:       book.ISBN,
-		Title:      book.Title,
+		Name:       book.Name,
 		Author:     book.Author,
 		CreateTime: timestamppb.New(book.CreateTime),
 		UpdateTime: timestamppb.New(book.UpdateTime),
-	}, nil
+	}
 }
