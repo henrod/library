@@ -6,6 +6,7 @@ option go_package = "github.com/Henrod/library/proto/library/api/v1";
 
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
 
 // Manages books of a digital library.
 service LibraryService {
@@ -50,9 +51,9 @@ message Book {
   string author = 2;
 
   // Output only. Time when book was added into the library.
-  string create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Time when book was last updated in the library.
   // Equal to create_time if create request.
-  string update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

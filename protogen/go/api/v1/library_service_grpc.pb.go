@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             (unknown)
-// source: api/v1/library.proto
+// source: api/v1/library_service.proto
 
 package v1
 
@@ -101,5 +101,5 @@ var LibraryService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/v1/library.proto",
+	Metadata: "api/v1/library_service.proto",
 }
