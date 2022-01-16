@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/Henrod/library/library/api/v1;v1";
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// Manages books of a digital library.
+service LibraryService {
+  // List the books in a shelf.
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {
+    option (google.api.http) = {
+      get: "/v1/{parent=shelves/*}/books"
+    };
+  }
+}
+
+message ListBooksRequest {
+  // Required. The parent resource name, for example, "shelves/shelf1".
+  string parent = 1;
+
+  // The maximum number of items to return.
+  // If empty, the default size is used.
+  int32 page_size = 2;
+
+  // The next_page_token value returned from a previous List request, if any.
+  string page_token = 3;
+}
+
+message ListBooksResponse {
+  // Books present in the shelf.
+  // There will be a maximum number of items returned based on the
+  // page_size field in the request.
+  repeated Book books = 1;
+
+  // Token to retrieve the next page of results, or empty if there are no
+  // more results in the list.
+  string next_page_token = 2;
+}
+
+message Book {
+  // A non-empty value.
+  // Must have less than 255 characters.
+  string title = 1;
+
+  // A non-empty value.
+  // Must have less than 255 characters.
+  string author = 2;
+
+  // Output only. Time when book was added into the library.
+  string create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Time when book was last updated in the library.
+  // Equal to create_time if create request.
+  string update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
