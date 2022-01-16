@@ -16,6 +16,13 @@ service LibraryService {
       get: "/v1/{parent=shelves/*}/books"
     };
   }
+
+  // Gets a book information.
+  rpc GetBook(GetBookRequest) returns (Book) {
+    option (google.api.http) = {
+      get: "/v1/{name=shelves/*/books/*}"
+    };
+  }
 }
 
 message ListBooksRequest {
@@ -39,6 +46,12 @@ message ListBooksResponse {
   // Token to retrieve the next page of results, or empty if there are no
   // more results in the list.
   string next_page_token = 2;
+}
+
+message GetBookRequest {
+  // The field will contain name of the resource requested, for example:
+  // "shelves/shelf1/books/book2"
+  string name = 1;
 }
 
 message Book {

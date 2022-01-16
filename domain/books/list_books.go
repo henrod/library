@@ -16,21 +16,21 @@ func NewListBooks(gateway ListBooksGateway) *ListBooksDomain {
 }
 
 type ListBooksGateway interface {
-	ListBooks(ctx context.Context, shelf string, pageSize, pageOffset int) ([]*entities.Book, error)
-	CountBooks(ctx context.Context, shelf string) (int, error)
+	ListBooks(ctx context.Context, shelfName string, pageSize, pageOffset int) ([]*entities.Book, error)
+	CountBooks(ctx context.Context, shelfName string) (int, error)
 }
 
 func (l *ListBooksDomain) List(
 	ctx context.Context,
-	shelf string,
+	shelfName string,
 	pageSize, pageOffset int,
 ) (books []*entities.Book, finished bool, err error) {
-	books, err = l.gateway.ListBooks(ctx, shelf, pageSize, pageOffset)
+	books, err = l.gateway.ListBooks(ctx, shelfName, pageSize, pageOffset)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to list books in gateway: %w", err)
 	}
 
-	totalBooks, err := l.gateway.CountBooks(ctx, shelf)
+	totalBooks, err := l.gateway.CountBooks(ctx, shelfName)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to count books in gateway: %w", err)
 	}

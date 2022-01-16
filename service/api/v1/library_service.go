@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Henrod/library/service/api"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -18,33 +20,42 @@ import (
 
 type LibraryService struct {
 	listBooks *books.ListBooksDomain
+	getBook   *books.GetBookDomain
 	log       *zap.SugaredLogger
 }
 
-func NewLibraryService(listBooks *books.ListBooksDomain, log *zap.SugaredLogger) *LibraryService {
-	return &LibraryService{listBooks: listBooks, log: log}
+func NewLibraryService(
+	log *zap.SugaredLogger,
+	listBooks *books.ListBooksDomain,
+	getBook *books.GetBookDomain,
+) *LibraryService {
+	return &LibraryService{
+		log:       log,
+		listBooks: listBooks,
+		getBook:   getBook,
+	}
 }
 
 func (l *LibraryService) ListBooks(ctx context.Context, request *v1.ListBooksRequest) (*v1.ListBooksResponse, error) {
 	parent := strings.Split(request.GetParent(), "/")
 	if len(parent) != 2 {
-		err := status.Errorf(codes.InvalidArgument, "parent must be of format 'parents/*'")
+		err := status.Errorf(codes.InvalidArgument, "parent must be of format 'shelves/*'")
 
-		return nil, fmt.Errorf("failed to split parent: %w", err)
+		return nil, fmt.Errorf("failed to get parent: %w", err)
 	}
 
-	shelf := parent[1]
+	shelfName := parent[1]
 	pageSize := getPageSize(request.GetPageSize())
 	pageOffset, err := getPageOffset(l.log, request.GetPageToken())
 	if err != nil {
 		return nil, err
 	}
 
-	eBooks, finishedBooks, err := l.listBooks.List(ctx, shelf, pageSize, pageOffset)
+	eBooks, finishedBooks, err := l.listBooks.List(ctx, shelfName, pageSize, pageOffset)
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to list books in domain")
 
-		return nil, fmt.Errorf("api error: %w", err)
+		return nil, api.ToGRPCError(err) //nolint:wrapcheck
 	}
 
 	nextPageToken := ""
@@ -66,5 +77,32 @@ func (l *LibraryService) ListBooks(ctx context.Context, request *v1.ListBooksReq
 	return &v1.ListBooksResponse{
 		Books:         rBooks,
 		NextPageToken: nextPageToken,
+	}, nil
+}
+
+func (l *LibraryService) GetBook(ctx context.Context, request *v1.GetBookRequest) (*v1.Book, error) {
+	resourceName := strings.Split(request.GetName(), "/")
+	if len(resourceName) != 4 {
+		err := status.Errorf(codes.InvalidArgument, "resource name must be of format 'shelves/*/books/*'")
+
+		return nil, fmt.Errorf("failed to get resource name: %w", err)
+	}
+
+	shelfName := resourceName[1]
+	bookName := resourceName[3]
+
+	book, err := l.getBook.GetBook(ctx, shelfName, bookName)
+	if err != nil {
+		l.log.With(zap.Error(err)).Error("failed to get book in domain")
+
+		return nil, api.ToGRPCError(err) //nolint:wrapcheck
+	}
+
+	return &v1.Book{
+		Isbn:       book.ISBN,
+		Title:      book.Title,
+		Author:     book.Author,
+		CreateTime: timestamppb.New(book.CreateTime),
+		UpdateTime: timestamppb.New(book.UpdateTime),
 	}, nil
 }

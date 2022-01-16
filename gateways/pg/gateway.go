@@ -8,6 +8,10 @@ import (
 	"github.com/go-pg/pg/v10"
 )
 
+// Gateway is the Postgres implementation of the domain gateways.
+//
+// On every select operation, if the record is not found, no error
+// is returned by the record is nil.
 type Gateway struct {
 	db *pg.DB
 }

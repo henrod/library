@@ -68,8 +68,9 @@ func run(sugar *zap.SugaredLogger) error {
 	reflection.Register(server)
 
 	proto.RegisterLibraryServiceServer(server, library.NewLibraryService(
-		books.NewListBooks(gateway),
 		sugar,
+		books.NewListBooks(gateway),
+		books.NewGetBookDomain(gateway),
 	))
 
 	go func() {

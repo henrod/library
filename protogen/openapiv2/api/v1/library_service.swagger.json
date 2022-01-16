@@ -16,6 +16,39 @@
     "application/json"
   ],
   "paths": {
+    "/v1/{name}": {
+      "get": {
+        "summary": "Gets a book information.",
+        "operationId": "LibraryService_GetBook",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Book"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The field will contain name of the resource requested, for example:\n\"shelves/shelf1/books/book2\"",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "shelves/[^/]+/books/[^/]+"
+          }
+        ],
+        "tags": [
+          "LibraryService"
+        ]
+      }
+    },
     "/v1/{parent}/books": {
       "get": {
         "summary": "List the books in a shelf.",
