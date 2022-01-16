@@ -15,17 +15,20 @@ type Shelf struct {
 type Book struct {
 	ShelfName  string
 	Shelf      *Shelf `pg:"rel:has-one"`
-	Author     string `pg:",pk"`
-	Title      string `pg:",pk"`
+	ISBN       string `pg:",pk"`
+	Author     string
+	Title      string
 	CreateTime time.Time
 	UpdateTime time.Time
 }
 
-func (g *Gateway) ListBooks(ctx context.Context, shelf string) ([]*entities.Book, error) {
+func (g *Gateway) ListBooks(ctx context.Context, shelf string, pageSize, pageOffset int) ([]*entities.Book, error) {
 	var books []*Book
 	err := g.db.ModelContext(ctx, &books).
 		Relation("Shelf").
 		Where("book.shelf_name = ?", shelf).
+		Limit(pageSize).
+		Offset(pageOffset).
 		Select()
 	if err != nil {
 		return nil, fmt.Errorf("failed to select books from shelf in postgres: %w", err)
@@ -34,6 +37,7 @@ func (g *Gateway) ListBooks(ctx context.Context, shelf string) ([]*entities.Book
 	eBooks := make([]*entities.Book, len(books))
 	for i, book := range books {
 		eBooks[i] = &entities.Book{
+			ISBN:       book.ISBN,
 			Title:      book.Title,
 			Author:     book.Author,
 			CreateTime: book.CreateTime,
@@ -42,4 +46,17 @@ func (g *Gateway) ListBooks(ctx context.Context, shelf string) ([]*entities.Book
 	}
 
 	return eBooks, nil
+}
+
+func (g *Gateway) CountBooks(ctx context.Context, shelf string) (int, error) {
+	book := new(Book)
+	count, err := g.db.ModelContext(ctx, book).
+		Relation("Shelf").
+		Where("book.shelf_name = ?", shelf).
+		Count()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count books from shelf in postgres: %w", err)
+	}
+
+	return count, nil
 }

@@ -16,14 +16,26 @@ func NewListBooks(gateway ListBooksGateway) *ListBooksDomain {
 }
 
 type ListBooksGateway interface {
-	ListBooks(ctx context.Context, shelf string) ([]*entities.Book, error)
+	ListBooks(ctx context.Context, shelf string, pageSize, pageOffset int) ([]*entities.Book, error)
+	CountBooks(ctx context.Context, shelf string) (int, error)
 }
 
-func (l *ListBooksDomain) List(ctx context.Context, shelf string) ([]*entities.Book, error) {
-	books, err := l.gateway.ListBooks(ctx, shelf)
+func (l *ListBooksDomain) List(
+	ctx context.Context,
+	shelf string,
+	pageSize, pageOffset int,
+) (books []*entities.Book, finished bool, err error) {
+	books, err = l.gateway.ListBooks(ctx, shelf, pageSize, pageOffset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list books in gateway: %w", err)
+		return nil, false, fmt.Errorf("failed to list books in gateway: %w", err)
 	}
 
-	return books, nil
+	totalBooks, err := l.gateway.CountBooks(ctx, shelf)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to count books in gateway: %w", err)
+	}
+
+	finished = totalBooks <= pageOffset+pageSize
+
+	return books, finished, nil
 }

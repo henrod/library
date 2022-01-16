@@ -8,3 +8,8 @@ plugins:
     opt:
       - paths=source_relative
       - require_unimplemented_servers=false
+  - name: grpc-gateway
+    out: protogen/go
+    opt:
+      - paths=source_relative
+      - generate_unbound_methods=true

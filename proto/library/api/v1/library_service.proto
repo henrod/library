@@ -43,17 +43,21 @@ message ListBooksResponse {
 
 message Book {
   // A non-empty value.
-  // Must have less than 255 characters.
-  string title = 1;
+  // Has the ISBN format: https://en.wikipedia.org/wiki/International_Standard_Book_Number
+  string isbn = 1;
 
   // A non-empty value.
   // Must have less than 255 characters.
-  string author = 2;
+  string title = 2;
+
+  // A non-empty value.
+  // Must have less than 255 characters.
+  string author = 3;
 
   // Output only. Time when book was added into the library.
-  google.protobuf.Timestamp create_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // Output only. Time when book was last updated in the library.
   // Equal to create_time if create request.
-  google.protobuf.Timestamp update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

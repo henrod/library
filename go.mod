@@ -4,14 +4,17 @@ go 1.17
 
 require (
 	github.com/go-pg/pg/v10 v10.10.6
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.2
 	go.uber.org/zap v1.20.0
 	google.golang.org/genproto v0.0.0-20220114231437-d2e6a121cae0
 	google.golang.org/grpc v1.43.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
 	google.golang.org/protobuf v1.27.1
 )
 
 require (
 	github.com/go-pg/zerochecker v0.2.0 // indirect
+	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
@@ -29,4 +32,5 @@ require (
 	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	mellium.im/sasl v0.2.1 // indirect
+	sigs.k8s.io/yaml v1.3.0 // indirect
 )
