@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+
 	"github.com/Henrod/library/domain/entities"
 
 	"github.com/Henrod/library/service/api"
@@ -61,7 +63,7 @@ func (l *LibraryService) ListBooks(ctx context.Context, request *v1.ListBooksReq
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to list books in domain")
 
-		return nil, api.ToGRPCError(err) //nolint:wrapcheck
+		return nil, api.ToGRPCError(err, nil) //nolint:wrapcheck
 	}
 
 	nextPageToken := ""
@@ -95,7 +97,14 @@ func (l *LibraryService) GetBook(ctx context.Context, request *v1.GetBookRequest
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to get book in domain")
 
-		return nil, api.ToGRPCError(err) //nolint:wrapcheck
+		return nil, api.ToGRPCError(err, api.Details{ //nolint:wrapcheck
+			codes.NotFound: {&errdetails.ResourceInfo{
+				ResourceType: "book",
+				ResourceName: request.GetName(),
+				Owner:        shelfName,
+				Description:  "the book does not exists in shelf",
+			}},
+		})
 	}
 
 	return toProtoBook(book), nil
@@ -121,7 +130,14 @@ func (l *LibraryService) CreateBook(ctx context.Context, request *v1.CreateBookR
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to create book in domain")
 
-		return nil, api.ToGRPCError(err) //nolint:wrapcheck
+		return nil, api.ToGRPCError(err, api.Details{ //nolint:wrapcheck
+			codes.AlreadyExists: {&errdetails.ResourceInfo{
+				ResourceType: "book",
+				ResourceName: request.GetBook().GetName(),
+				Owner:        request.GetParent(),
+				Description:  "the book already exists in shelf",
+			}},
+		})
 	}
 
 	return toProtoBook(book), nil

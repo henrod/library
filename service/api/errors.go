@@ -4,13 +4,16 @@ import (
 	"errors"
 
 	domainErrors "github.com/Henrod/library/domain/errors"
+	// TODO: fix this linter error: github.com/golang/protobuf/proto incompatible with google.golang.org/protobuf/proto
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func ToGRPCError(err error, details ...proto.Message) error {
+type Details map[codes.Code][]proto.Message
+
+func ToGRPCError(err error, details Details) error {
 	if err == nil {
 		return nil
 	}
@@ -19,12 +22,12 @@ func ToGRPCError(err error, details ...proto.Message) error {
 
 	notFoundError := &domainErrors.NotFoundError{Details: ""}
 	if errors.As(err, notFoundError) {
-		grpcError = withDetails(codes.NotFound, "resource not found", details...)
+		grpcError = withDetails(codes.NotFound, "resource not found", details[codes.NotFound]...)
 	}
 
 	alreadyExistsError := &domainErrors.AlreadyExistsError{Details: ""}
 	if errors.As(err, alreadyExistsError) {
-		grpcError = withDetails(codes.AlreadyExists, "resource already exists", details...)
+		grpcError = withDetails(codes.AlreadyExists, "resource already exists", details[codes.AlreadyExists]...)
 	}
 
 	if grpcError == nil {
