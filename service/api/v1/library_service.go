@@ -102,7 +102,7 @@ func (l *LibraryService) GetBook(ctx context.Context, request *v1.GetBookRequest
 				ResourceType: "book",
 				ResourceName: request.GetName(),
 				Owner:        shelfName,
-				Description:  "the book does not exists in shelf",
+				Description:  "the book does not exist in shelf",
 			}},
 		})
 	}
