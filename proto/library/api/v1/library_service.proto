@@ -7,6 +7,7 @@ option go_package = "github.com/Henrod/library/proto/library/api/v1";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 
 // Manages books of a digital library.
 service LibraryService {
@@ -28,6 +29,14 @@ service LibraryService {
   rpc CreateBook(CreateBookRequest) returns (Book) {
     option (google.api.http) = {
       post: "/v1/{parent=shelves/*}/books"
+      body: "book"
+    };
+  }
+
+  // Updates a book's attribute of a shelf.
+  rpc UpdateBook(UpdateBookRequest) returns (Book) {
+    option (google.api.http) = {
+      patch: "/v1/{book.name=shelves/*/books/*}"
       body: "book"
     };
   }
@@ -70,6 +79,15 @@ message CreateBookRequest {
 
   // Required. The book resource to create.
   Book book = 2;
+}
+
+message UpdateBookRequest {
+  // The book resource with updated fields.
+  Book book = 1;
+
+  // The update mask applies to the resource. For the `FieldMask` definition,
+  // see https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask
+  google.protobuf.FieldMask update_mask = 2;
 }
 
 message Book {

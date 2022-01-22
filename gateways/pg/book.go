@@ -24,6 +24,15 @@ type Book struct {
 	UpdateTime time.Time
 }
 
+func (b *Book) toEntitiesBook() *entities.Book {
+	return &entities.Book{
+		Name:       b.Name,
+		Author:     b.Author,
+		CreateTime: b.CreateTime,
+		UpdateTime: b.UpdateTime,
+	}
+}
+
 func (g *Gateway) ListBooks(ctx context.Context, shelfName string, pageSize, pageOffset int) ([]*entities.Book, error) {
 	var books []*Book
 	err := g.db.ModelContext(ctx, &books).
@@ -38,12 +47,7 @@ func (g *Gateway) ListBooks(ctx context.Context, shelfName string, pageSize, pag
 
 	eBooks := make([]*entities.Book, len(books))
 	for i, book := range books {
-		eBooks[i] = &entities.Book{
-			Name:       book.Name,
-			Author:     book.Author,
-			CreateTime: book.CreateTime,
-			UpdateTime: book.UpdateTime,
-		}
+		eBooks[i] = book.toEntitiesBook()
 	}
 
 	return eBooks, nil
@@ -78,12 +82,7 @@ func (g *Gateway) GetBook(ctx context.Context, shelfName, bookName string) (*ent
 		return nil, fmt.Errorf("failed to select book in postgres: %w", err)
 	}
 
-	return &entities.Book{
-		Name:       book.Name,
-		Author:     book.Author,
-		CreateTime: book.CreateTime,
-		UpdateTime: book.UpdateTime,
-	}, nil
+	return book.toEntitiesBook(), nil
 }
 
 func (g *Gateway) CreateBook(ctx context.Context, shelfName string, eBook *entities.Book) (*entities.Book, error) {
@@ -101,6 +100,7 @@ func (g *Gateway) CreateBook(ctx context.Context, shelfName string, eBook *entit
 	_, err := g.db.ModelContext(ctx, book).Insert()
 	if err != nil {
 		var pgErr pg.Error
+		// TODO: fix when shelf doesn't exist
 		if errors.As(err, &pgErr) && pgErr.IntegrityViolation() {
 			return nil, nil
 		}
@@ -108,10 +108,39 @@ func (g *Gateway) CreateBook(ctx context.Context, shelfName string, eBook *entit
 		return nil, fmt.Errorf("failed to insert book in postgres: %w", err)
 	}
 
-	return &entities.Book{
-		Name:       book.Name,
-		Author:     book.Author,
-		CreateTime: book.CreateTime,
-		UpdateTime: book.UpdateTime,
-	}, nil
+	return book.toEntitiesBook(), nil
+}
+
+func (g *Gateway) UpdateBook(
+	ctx context.Context,
+	shelfName string,
+	eBook *entities.Book,
+	fields []string,
+) (*entities.Book, error) {
+	now := time.Now()
+
+	book := &Book{
+		ShelfName:  shelfName,
+		Shelf:      nil,
+		Name:       eBook.Name,
+		Author:     eBook.Author,
+		CreateTime: time.Time{},
+		UpdateTime: now,
+	}
+
+	fields = append(fields, "update_time")
+
+	_, err := g.db.ModelContext(ctx, book).Column(fields...).WherePK().Returning("*").Update()
+	if err != nil {
+		if errors.Is(err, pg.ErrNoRows) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("failed to insert book in postgres: %w", err)
+	}
+
+	// TODO: when book doesn't exist
+	// TODO: when shelf doesn't exist
+
+	return book.toEntitiesBook(), nil
 }

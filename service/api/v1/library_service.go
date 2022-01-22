@@ -6,27 +6,25 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-
+	"github.com/Henrod/library/domain/books"
 	"github.com/Henrod/library/domain/entities"
-
+	v1 "github.com/Henrod/library/protogen/go/api/v1"
 	"github.com/Henrod/library/service/api"
-
+	"go.uber.org/zap"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/Henrod/library/domain/books"
-	"go.uber.org/zap"
-
-	v1 "github.com/Henrod/library/protogen/go/api/v1"
+	// TODO: fix this linter error: github.com/golang/protobuf/proto incompatible with google.golang.org/protobuf/proto
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 )
 
 type LibraryService struct {
 	listBooks  *books.ListBooksDomain
 	getBook    *books.GetBookDomain
 	createBook *books.CreateBookDomain
+	updateBook *books.UpdateBookDomain
 	log        *zap.SugaredLogger
 }
 
@@ -35,12 +33,14 @@ func NewLibraryService(
 	listBooks *books.ListBooksDomain,
 	getBook *books.GetBookDomain,
 	createBook *books.CreateBookDomain,
+	updateBook *books.UpdateBookDomain,
 ) *LibraryService {
 	return &LibraryService{
 		log:        log,
 		listBooks:  listBooks,
 		getBook:    getBook,
 		createBook: createBook,
+		updateBook: updateBook,
 	}
 }
 
@@ -63,7 +63,7 @@ func (l *LibraryService) ListBooks(ctx context.Context, request *v1.ListBooksReq
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to list books in domain")
 
-		return nil, api.ToGRPCError(err, nil) //nolint:wrapcheck
+		return nil, api.GRPCError(err, nil) //nolint:wrapcheck
 	}
 
 	nextPageToken := ""
@@ -97,7 +97,7 @@ func (l *LibraryService) GetBook(ctx context.Context, request *v1.GetBookRequest
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to get book in domain")
 
-		return nil, api.ToGRPCError(err, api.Details{ //nolint:wrapcheck
+		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
 			codes.NotFound: {&errdetails.ResourceInfo{
 				ResourceType: "book",
 				ResourceName: request.GetName(),
@@ -119,18 +119,18 @@ func (l *LibraryService) CreateBook(ctx context.Context, request *v1.CreateBookR
 	}
 
 	shelfName := parent[1]
-	book := &entities.Book{
+	inputBook := &entities.Book{
 		Name:       request.GetBook().GetName(),
 		Author:     request.GetBook().GetAuthor(),
 		CreateTime: time.Time{},
 		UpdateTime: time.Time{},
 	}
 
-	book, err := l.createBook.CreateBook(ctx, shelfName, book)
+	book, err := l.createBook.CreateBook(ctx, shelfName, inputBook)
 	if err != nil {
 		l.log.With(zap.Error(err)).Error("failed to create book in domain")
 
-		return nil, api.ToGRPCError(err, api.Details{ //nolint:wrapcheck
+		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
 			codes.AlreadyExists: {&errdetails.ResourceInfo{
 				ResourceType: "book",
 				ResourceName: request.GetBook().GetName(),
@@ -141,6 +141,46 @@ func (l *LibraryService) CreateBook(ctx context.Context, request *v1.CreateBookR
 	}
 
 	return toProtoBook(book), nil
+}
+
+func (l *LibraryService) UpdateBook(ctx context.Context, request *v1.UpdateBookRequest) (*v1.Book, error) {
+	name := strings.Split(request.GetBook().GetName(), "/")
+	if len(name) != 4 {
+		err := status.Errorf(codes.InvalidArgument, "book name must be of format 'shelves/*/books/*'")
+
+		return nil, fmt.Errorf("failed to get book name: %w", err)
+	}
+
+	shelfName := name[1]
+	inputBook := &entities.Book{
+		Name:       name[3],
+		Author:     request.GetBook().GetAuthor(),
+		CreateTime: time.Time{},
+		UpdateTime: time.Time{},
+	}
+
+	book, err := l.updateBook.UpdateBook(ctx, shelfName, inputBook, request.GetUpdateMask())
+	if err != nil {
+		l.log.With(zap.Error(err)).Error("failed to update book in domain")
+
+		details := api.Details{
+			codes.NotFound: {&errdetails.ResourceInfo{
+				ResourceType: "book",
+				ResourceName: request.GetBook().GetName(),
+				Owner:        fmt.Sprintf("%s/%s", name[0], name[1]),
+				Description:  "book not found in shelf",
+			}},
+		}
+
+		if badRequestDetail, ok := api.BadRequestDetails(err); ok {
+			details[codes.InvalidArgument] = []proto.Message{badRequestDetail}
+		}
+
+		return nil, api.GRPCError(err, details) //nolint:wrapcheck
+	}
+
+	return toProtoBook(book), nil
+
 }
 
 func toProtoBook(book *entities.Book) *v1.Book {

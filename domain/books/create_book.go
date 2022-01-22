@@ -23,26 +23,19 @@ type CreateBookGateway interface {
 func (g *CreateBookDomain) CreateBook(
 	ctx context.Context,
 	shelfName string,
-	book *entities.Book,
+	inputBook *entities.Book,
 ) (*entities.Book, error) {
-	bookName := book.Name
-	book, err := g.gateway.CreateBook(ctx, shelfName, book)
+	bookName := inputBook.Name
+	book, err := g.gateway.CreateBook(ctx, shelfName, inputBook)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create book in gateway: %w", err)
 	}
 
 	if book == nil {
-		err := errors.AlreadyExistsError{
+		return nil, errors.AlreadyExistsError{
 			Details: fmt.Sprintf("book %s at shelf %s already exists", bookName, shelfName),
 		}
-
-		return nil, err
 	}
 
-	return &entities.Book{
-		Name:       book.Name,
-		Author:     book.Author,
-		CreateTime: book.CreateTime,
-		UpdateTime: book.UpdateTime,
-	}, nil
+	return book, nil
 }

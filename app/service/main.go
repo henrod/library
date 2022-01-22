@@ -72,6 +72,7 @@ func run(sugar *zap.SugaredLogger) error {
 		books.NewListBooks(gateway),
 		books.NewGetBookDomain(gateway),
 		books.NewCreateBookDomain(gateway),
+		books.NewUpdateBookDomain(gateway),
 	))
 
 	go func() {

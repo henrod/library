@@ -16,6 +16,55 @@
     "application/json"
   ],
   "paths": {
+    "/v1/{book.name}": {
+      "patch": {
+        "summary": "Updates a book's attribute of a shelf.",
+        "operationId": "LibraryService_UpdateBook",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Book"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "book.name",
+            "description": "Required. It must have less than 255 characters.",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "shelves/[^/]+/books/[^/]+"
+          },
+          {
+            "name": "body",
+            "description": "The book resource with updated fields.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Book"
+            }
+          },
+          {
+            "name": "updateMask",
+            "description": "The update mask applies to the resource. For the `FieldMask` definition,\nsee https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "LibraryService"
+        ]
+      }
+    },
     "/v1/{name}": {
       "get": {
         "summary": "Gets a book information.",

@@ -6,7 +6,7 @@ CREATE TABLE shelves (
     name TEXT PRIMARY KEY,
     create_time TIMESTAMP,
     update_time TIMESTAMP
-)
+);
 
 CREATE TABLE books (
     name TEXT PRIMARY KEY,
@@ -15,4 +15,4 @@ CREATE TABLE books (
     create_time TIMESTAMP,
     update_time TIMESTAMP,
     CONSTRAINT fk_shelf FOREIGN KEY (shelf_name) REFERENCES shelves (name)
-)
+);
