@@ -8,6 +8,7 @@ import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/empty.proto";
 
 // Manages books of a digital library.
 service LibraryService {
@@ -38,6 +39,13 @@ service LibraryService {
     option (google.api.http) = {
       patch: "/v1/{book.name=shelves/*/books/*}"
       body: "book"
+    };
+  }
+
+  // Remove a book from the shelf.
+  rpc DeleteBook(DeleteBookRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{name=shelves/*/books/*}"
     };
   }
 }
@@ -88,6 +96,11 @@ message UpdateBookRequest {
   // The update mask applies to the resource. For the `FieldMask` definition,
   // see https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask
   google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteBookRequest {
+  // The resource name of the book to be deleted.
+  string name = 1;
 }
 
 message Book {

@@ -139,8 +139,22 @@ func (g *Gateway) UpdateBook(
 		return nil, fmt.Errorf("failed to insert book in postgres: %w", err)
 	}
 
-	// TODO: when book doesn't exist
-	// TODO: when shelf doesn't exist
+	// TODO: handle when shelf doesn't exist
 
 	return book.toEntitiesBook(), nil
+}
+func (g *Gateway) DeleteBook(ctx context.Context, shelfName, bookName string) (bool, error) {
+	book := &Book{ShelfName: shelfName, Name: bookName} //nolint:exhaustivestruct
+	r, err := g.db.ModelContext(ctx, book).WherePK().Delete()
+	if err != nil {
+		if errors.Is(err, pg.ErrNoRows) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("failed to delete book in postgres: %w", err)
+	}
+
+	deleted := r.RowsAffected() > 0
+
+	return deleted, nil
 }

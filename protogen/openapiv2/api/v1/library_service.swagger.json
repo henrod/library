@@ -96,6 +96,37 @@
         "tags": [
           "LibraryService"
         ]
+      },
+      "delete": {
+        "summary": "Remove a book from the shelf.",
+        "operationId": "LibraryService_DeleteBook",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "description": "The resource name of the book to be deleted.",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "shelves/[^/]+/books/[^/]+"
+          }
+        ],
+        "tags": [
+          "LibraryService"
+        ]
       }
     },
     "/v1/{parent}/books": {

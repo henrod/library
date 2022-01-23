@@ -14,6 +14,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	// TODO: fix this linter error: github.com/golang/protobuf/proto incompatible with google.golang.org/protobuf/proto
@@ -25,6 +26,7 @@ type LibraryService struct {
 	getBook    *books.GetBookDomain
 	createBook *books.CreateBookDomain
 	updateBook *books.UpdateBookDomain
+	deleteBook *books.DeleteBookDomain
 	log        *zap.SugaredLogger
 }
 
@@ -34,6 +36,7 @@ func NewLibraryService(
 	getBook *books.GetBookDomain,
 	createBook *books.CreateBookDomain,
 	updateBook *books.UpdateBookDomain,
+	deleteBook *books.DeleteBookDomain,
 ) *LibraryService {
 	return &LibraryService{
 		log:        log,
@@ -41,6 +44,7 @@ func NewLibraryService(
 		getBook:    getBook,
 		createBook: createBook,
 		updateBook: updateBook,
+		deleteBook: deleteBook,
 	}
 }
 
@@ -181,6 +185,34 @@ func (l *LibraryService) UpdateBook(ctx context.Context, request *v1.UpdateBookR
 
 	return toProtoBook(book), nil
 
+}
+
+func (l *LibraryService) DeleteBook(ctx context.Context, request *v1.DeleteBookRequest) (*emptypb.Empty, error) {
+	name := strings.Split(request.GetName(), "/")
+	if len(name) != 4 {
+		err := status.Errorf(codes.InvalidArgument, "book name must be of format 'shelves/*/books/*'")
+
+		return nil, fmt.Errorf("failed to get book name: %w", err)
+	}
+
+	shelfName := name[1]
+	bookName := name[3]
+
+	err := l.deleteBook.DeleteBook(ctx, shelfName, bookName)
+	if err != nil {
+		l.log.With(zap.Error(err)).Error("failed to update book in domain")
+
+		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
+			codes.NotFound: {&errdetails.ResourceInfo{
+				ResourceType: "book",
+				ResourceName: request.GetName(),
+				Owner:        fmt.Sprintf("%s/%s", name[0], name[1]),
+				Description:  "book not found in shelf",
+			}},
+		})
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func toProtoBook(book *entities.Book) *v1.Book {

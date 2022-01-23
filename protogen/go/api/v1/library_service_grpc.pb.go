@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -30,6 +31,8 @@ type LibraryServiceClient interface {
 	CreateBook(ctx context.Context, in *CreateBookRequest, opts ...grpc.CallOption) (*Book, error)
 	// Updates a book's attribute of a shelf.
 	UpdateBook(ctx context.Context, in *UpdateBookRequest, opts ...grpc.CallOption) (*Book, error)
+	// Remove a book from the shelf.
+	DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type libraryServiceClient struct {
@@ -76,6 +79,15 @@ func (c *libraryServiceClient) UpdateBook(ctx context.Context, in *UpdateBookReq
 	return out, nil
 }
 
+func (c *libraryServiceClient) DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/api.v1.LibraryService/DeleteBook", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LibraryServiceServer is the server API for LibraryService service.
 // All implementations should embed UnimplementedLibraryServiceServer
 // for forward compatibility
@@ -88,6 +100,8 @@ type LibraryServiceServer interface {
 	CreateBook(context.Context, *CreateBookRequest) (*Book, error)
 	// Updates a book's attribute of a shelf.
 	UpdateBook(context.Context, *UpdateBookRequest) (*Book, error)
+	// Remove a book from the shelf.
+	DeleteBook(context.Context, *DeleteBookRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedLibraryServiceServer should be embedded to have forward compatible implementations.
@@ -105,6 +119,9 @@ func (UnimplementedLibraryServiceServer) CreateBook(context.Context, *CreateBook
 }
 func (UnimplementedLibraryServiceServer) UpdateBook(context.Context, *UpdateBookRequest) (*Book, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateBook not implemented")
+}
+func (UnimplementedLibraryServiceServer) DeleteBook(context.Context, *DeleteBookRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteBook not implemented")
 }
 
 // UnsafeLibraryServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -190,6 +207,24 @@ func _LibraryService_UpdateBook_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LibraryService_DeleteBook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteBookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LibraryServiceServer).DeleteBook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.LibraryService/DeleteBook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LibraryServiceServer).DeleteBook(ctx, req.(*DeleteBookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LibraryService_ServiceDesc is the grpc.ServiceDesc for LibraryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -212,6 +247,10 @@ var LibraryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateBook",
 			Handler:    _LibraryService_UpdateBook_Handler,
+		},
+		{
+			MethodName: "DeleteBook",
+			Handler:    _LibraryService_DeleteBook_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

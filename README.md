@@ -315,3 +315,45 @@ gRPC
 ```text
 Error invoking method "api.v1.LibraryService/UpdateBook": error getting request data: message type api.v1.Book has no known field named invalid_field
 ```
+
+## Delete Book
+
+### Success
+
+#### Request
+
+```sh
+curl localhost:8081/v1/shelves/shelf1/books/book1 -XDELETE
+```
+
+or
+
+```sh
+grpcurl -d '{ "name": "shelves/shelf1/books/book1" }' \
+    -plaintext localhost:8080 api.v1.LibraryService/DeleteBook
+```
+
+#### Response
+```json
+{}
+```
+
+### Not found
+
+#### Response
+
+```json
+{
+  "code": 5,
+  "message": "resource not found",
+  "details": [
+    {
+      "@type": "type.googleapis.com/google.rpc.ResourceInfo",
+      "resourceType": "book",
+      "resourceName": "shelves/shelf1/books/book2",
+      "owner": "shelves/shelf1",
+      "description": "book not found in shelf"
+    }
+  ]
+}
+```
