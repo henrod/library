@@ -30,10 +30,39 @@ func (b *Book) toEntitiesBook() *entities.Book {
 		Author:     b.Author,
 		CreateTime: b.CreateTime,
 		UpdateTime: b.UpdateTime,
+		Shelf: &entities.Shelf{
+			Name: b.ShelfName,
+		},
 	}
 }
 
-func (g *Gateway) ListBooks(ctx context.Context, shelfName string, pageSize, pageOffset int) ([]*entities.Book, error) {
+func (g *Gateway) ListBooks(
+	ctx context.Context,
+	pageSize, pageOffset int,
+) ([]*entities.Book, error) {
+	var books []*Book
+	err := g.db.ModelContext(ctx, &books).
+		Relation("Shelf").
+		Limit(pageSize).
+		Offset(pageOffset).
+		Select()
+	if err != nil {
+		return nil, fmt.Errorf("failed to select books in postgres: %w", err)
+	}
+
+	eBooks := make([]*entities.Book, len(books))
+	for i, book := range books {
+		eBooks[i] = book.toEntitiesBook()
+	}
+
+	return eBooks, nil
+}
+
+func (g *Gateway) ListShelfBooks(
+	ctx context.Context,
+	shelfName string,
+	pageSize, pageOffset int,
+) ([]*entities.Book, error) {
 	var books []*Book
 	err := g.db.ModelContext(ctx, &books).
 		Relation("Shelf").
@@ -53,7 +82,19 @@ func (g *Gateway) ListBooks(ctx context.Context, shelfName string, pageSize, pag
 	return eBooks, nil
 }
 
-func (g *Gateway) CountBooks(ctx context.Context, shelfName string) (int, error) {
+func (g *Gateway) CountBooks(ctx context.Context) (int, error) {
+	book := new(Book)
+	count, err := g.db.ModelContext(ctx, book).
+		Relation("Shelf").
+		Count()
+	if err != nil {
+		return 0, fmt.Errorf("failed to count books in postgres: %w", err)
+	}
+
+	return count, nil
+}
+
+func (g *Gateway) CountShelfBooks(ctx context.Context, shelfName string) (int, error) {
 	book := new(Book)
 	count, err := g.db.ModelContext(ctx, book).
 		Relation("Shelf").

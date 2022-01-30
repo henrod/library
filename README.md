@@ -28,7 +28,7 @@ or
 grpcurl -d '{
         "parent": "shelves/shelf1", 
         "book": {
-            "name": "book1", 
+            "name": "shelves/shelf1/books/book1", 
             "author": "Henrod"
         }
     }' \
@@ -38,7 +38,7 @@ grpcurl -d '{
 #### Response
 ```json
 {
-  "name": "book1",
+  "name": "shelves/shelf1/books/book1",
   "author": "Henrod",
   "createTime": "2022-01-21T00:02:34.045823Z",
   "updateTime": "2022-01-21T00:02:34.045823Z"
@@ -87,7 +87,7 @@ grpcurl -d '{"name": "shelves/shelf1/books/book1"}' \
 {
   "books": [
     {
-      "name": "book1",
+      "name": "shelves/shelf1/books/book1",
       "author": "Henrod",
       "createTime": "2022-01-20T11:01:42.327988Z",
       "updateTime": "2022-01-20T11:01:42.327988Z"
@@ -122,7 +122,7 @@ grpcurl -d '{"name": "shelves/shelf1/books/book1"}' \
 #### Request
 
 ```sh
-curl localhost:8081/v1/shelves/shelf1/books\?page_size=1
+curl localhost:8081/v1/shelves/shelf1/books
 ```
 
 or 
@@ -138,13 +138,13 @@ grpcurl -d '{"parent": "shelves/shelf1"}' \
 {
   "books": [
     {
-      "name": "book1",
+      "name": "shelves/shelf1/books/book1",
       "author": "Henrod",
       "createTime": "2022-01-20T11:01:42.327988Z",
       "updateTime": "2022-01-22T21:57:56.011468Z"
     },
     {
-      "name": "book2",
+      "name": "shelves/shelf1/books/book2",
       "author": "Henrod",
       "createTime": "2022-01-21T00:02:34.045823Z",
       "updateTime": "2022-01-22T21:59:41.508003Z"
@@ -174,7 +174,7 @@ grpcurl -d '{"parent": "shelves/shelf1", "page_size": 1}' \
 {
   "books": [
     {
-      "name": "book1",
+      "name": "shelves/shelf1/books/book1",
       "author": "Henrod",
       "createTime": "2022-01-20T11:01:42.327988Z",
       "updateTime": "2022-01-20T11:01:42.327988Z"
@@ -208,10 +208,47 @@ grpcurl -d '{
 {
   "books": [
     {
-      "name": "book2",
+      "name": "shelves/shelf1/books/book2",
       "author": "Henrod",
       "createTime": "2022-01-21T00:02:29.938371Z",
       "updateTime": "2022-01-21T00:02:29.938371Z"
+    }
+  ],
+  "nextPageToken": ""
+}
+```
+
+### List all books
+
+#### Request
+
+```sh
+curl localhost:8081/v1/shelves/-/books
+```
+
+or
+
+```sh
+grpcurl -d '{"parent": "shelves/-"}' \
+    -plaintext localhost:8080 api.v1.LibraryService/ListBooks
+```
+
+#### Response
+
+```json
+{
+  "books": [
+    {
+      "name": "shelves/shelf1/books/book1",
+      "author": "Henrod",
+      "createTime": "2022-01-20T11:01:42.327988Z",
+      "updateTime": "2022-01-22T21:57:56.011468Z"
+    },
+    {
+      "name": "shelves/shelf2/books/book1",
+      "author": "Henrod",
+      "createTime": "2022-01-21T00:02:34.045823Z",
+      "updateTime": "2022-01-22T21:59:41.508003Z"
     }
   ],
   "nextPageToken": ""
@@ -248,7 +285,7 @@ grpcurl -d '{
 #### Response
 ```json
 {
-  "name": "book1",
+  "name": "shelves/shelf1/books/book1",
   "author": "Henrique Rodrigues",
   "createTime": "2022-01-20T11:01:42.327988Z",
   "updateTime": "2022-01-22T21:57:56.011468Z"

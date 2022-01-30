@@ -9,10 +9,11 @@ CREATE TABLE shelves (
 );
 
 CREATE TABLE books (
-    name TEXT PRIMARY KEY,
+    name TEXT,
     author TEXT,
     shelf_name TEXT,
     create_time TIMESTAMP,
     update_time TIMESTAMP,
-    CONSTRAINT fk_shelf FOREIGN KEY (shelf_name) REFERENCES shelves (name)
+    CONSTRAINT fk_shelf FOREIGN KEY (shelf_name) REFERENCES shelves (name),
+    PRIMARY KEY (name, shelf_name)
 );

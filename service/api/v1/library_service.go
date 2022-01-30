@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	// TODO: fix this linter error: github.com/golang/protobuf/proto incompatible with google.golang.org/protobuf/proto
+	// TODO: fix this linter error: github.com/golang/protobuf/proto incompatible with google.golang.org/protobuf/proto.
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 )
 
@@ -48,6 +48,14 @@ func NewLibraryService(
 	}
 }
 
+// ListBooks returns a list of books in the following cases:
+// 1. When shelfID is valid, returns the books in that shelf.
+// 2. When shelfID is "-", returns all books in the library.
+// 3. When shelfID is invalid, returns empty list.
+//
+// Method is paginated in the following standard: https://cloud.google.com/apis/design/design_patterns#list_pagination.
+//
+// Book resource name must be in the format: /shelves/:shelfID/books.
 func (l *LibraryService) ListBooks(ctx context.Context, request *v1.ListBooksRequest) (*v1.ListBooksResponse, error) {
 	parent := strings.Split(request.GetParent(), "/")
 	if len(parent) != 2 {
@@ -126,6 +134,7 @@ func (l *LibraryService) CreateBook(ctx context.Context, request *v1.CreateBookR
 	inputBook := &entities.Book{
 		Name:       request.GetBook().GetName(),
 		Author:     request.GetBook().GetAuthor(),
+		Shelf:      nil,
 		CreateTime: time.Time{},
 		UpdateTime: time.Time{},
 	}
@@ -159,6 +168,7 @@ func (l *LibraryService) UpdateBook(ctx context.Context, request *v1.UpdateBookR
 	inputBook := &entities.Book{
 		Name:       name[3],
 		Author:     request.GetBook().GetAuthor(),
+		Shelf:      nil,
 		CreateTime: time.Time{},
 		UpdateTime: time.Time{},
 	}
@@ -184,7 +194,6 @@ func (l *LibraryService) UpdateBook(ctx context.Context, request *v1.UpdateBookR
 	}
 
 	return toProtoBook(book), nil
-
 }
 
 func (l *LibraryService) DeleteBook(ctx context.Context, request *v1.DeleteBookRequest) (*emptypb.Empty, error) {
@@ -217,9 +226,13 @@ func (l *LibraryService) DeleteBook(ctx context.Context, request *v1.DeleteBookR
 
 func toProtoBook(book *entities.Book) *v1.Book {
 	return &v1.Book{
-		Name:       book.Name,
+		Name:       bookResourceName(book),
 		Author:     book.Author,
 		CreateTime: timestamppb.New(book.CreateTime),
 		UpdateTime: timestamppb.New(book.UpdateTime),
 	}
+}
+
+func bookResourceName(book *entities.Book) string {
+	return fmt.Sprintf("shelves/%s/books/%s", book.Shelf.Name, book.Name)
 }
