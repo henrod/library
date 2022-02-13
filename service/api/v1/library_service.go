@@ -250,7 +250,7 @@ func (l *LibraryService) CreateShelf(
 		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
 			codes.AlreadyExists: {&errdetails.ResourceInfo{
 				ResourceType: "operation",
-				ResourceName: request.GetShelf().GetName(),
+				ResourceName: l.createShelf.GetOperationName(inputShelf.Name),
 				Owner:        "library",
 				Description:  "the create shelf operation already exists",
 			}},
@@ -281,6 +281,25 @@ func (l *LibraryService) GetOperation(
 		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
 			codes.NotFound: {&errdetails.ResourceInfo{
 				ResourceType: "operation",
+				ResourceName: l.createShelf.GetOperationName(shelfName),
+				Owner:        "library",
+				Description:  "the operation doesn't exist; is not running nor completed",
+			}},
+		})
+	}
+
+	longRunningOperation := toLongRunningOperation(longRunningOperationName, operation)
+	if !longRunningOperation.Done || longRunningOperation.Result != nil {
+		return longRunningOperation, nil
+	}
+
+	shelf, err := l.getShelf.GetShelf(ctx, shelfName)
+	if err != nil {
+		l.log.With(zap.Error(err)).Error("failed to get shelf in domain")
+
+		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
+			codes.NotFound: {&errdetails.ResourceInfo{
+				ResourceType: "operation",
 				ResourceName: request.GetName(),
 				Owner:        "library",
 				Description:  "the operation doesn't exist; is not running nor completed",
@@ -288,27 +307,11 @@ func (l *LibraryService) GetOperation(
 		})
 	}
 
-	return toLongRunningOperation(longRunningOperationName, operation), nil
+	response, _ := anypb.New(toProtoShelf(shelf))
+	longRunningOperation.Result = &longrunning.Operation_Response{Response: response}
+	longRunningOperation.Done = true
 
-	//shelf, err := l.getShelf.GetShelf(ctx, shelfName)
-	//if err != nil {
-	//	l.log.With(zap.Error(err)).Error("failed to get shelf in domain")
-	//
-	//	return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
-	//		codes.NotFound: {&errdetails.ResourceInfo{
-	//			ResourceType: "operation",
-	//			ResourceName: request.GetName(),
-	//			Owner:        "library",
-	//			Description:  "the operation doesn't exist; is not running nor completed",
-	//		}},
-	//	})
-	//}
-	//
-	//longRunningOperation := toLongRunningOperation(longRunningOperationName, operation)
-	//response, _ := anypb.New(toProtoShelf(shelf))
-	//longRunningOperation.Result = &longrunning.Operation_Response{Response: response}
-	//
-	//return longRunningOperation, nil
+	return longRunningOperation, nil
 }
 
 func toProtoBook(book *entities.Book) *v1.Book {
@@ -350,7 +353,7 @@ func toLongRunningOperation(name string, operation *entities.Operation) *longrun
 	longRunningOperation := &longrunning.Operation{
 		Name:     operation.Name,
 		Metadata: metadata,
-		Done:     false,
+		Done:     operation.Finished(),
 		Result:   nil,
 	}
 

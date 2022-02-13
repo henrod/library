@@ -12,3 +12,7 @@ type Operation struct {
 func (o *Operation) ResourceName() string {
 	return strings.TrimPrefix(o.Name, "operations/")
 }
+
+func (o *Operation) Finished() bool {
+	return o.Percentage == 100 || o.Error != nil
+}

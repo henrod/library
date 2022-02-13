@@ -54,7 +54,7 @@ var shelfCreationStages = []string{
 
 const (
 	stageTime                 = 1 * time.Second
-	failedStageExpirationTime = 10 * time.Second
+	failedStageExpirationTime = 60 * time.Second
 )
 
 // StartCreateShelfOperation starts a long-running operation to create a shelf.
@@ -148,9 +148,13 @@ func (c *CreateShelfDomain) GetOperation(shelfName string) (*entities.Operation,
 	}
 
 	return &entities.Operation{
-		Name:       fmt.Sprintf("operations/shelves/%s", shelfName),
+		Name:       c.GetOperationName(shelfName),
 		Stage:      shelfCreationStages[status.stage],
 		Percentage: status.stage * 100 / (len(shelfCreationStages) - 1),
 		Error:      status.err,
 	}, nil
+}
+
+func (c *CreateShelfDomain) GetOperationName(shelfName string) string {
+	return fmt.Sprintf("operations/shelves/%s", shelfName)
 }

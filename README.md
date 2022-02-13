@@ -394,3 +394,162 @@ grpcurl -d '{ "name": "shelves/shelf1/books/book1" }' \
   ]
 }
 ```
+
+## Create Shelf
+
+Asynchronous operation. Returns a long-running operation resource, which is used by the client to poll the status.
+
+### Success
+
+#### Request
+
+```sh
+curl localhost:8081/v1/shelves -d'{"name": "shelf1"}'
+```
+
+or
+
+```sh
+grpcurl -d '{ "name": "shelf1" }' \
+    -plaintext localhost:8080 api.v1.LibraryService/CreateShelf
+```
+
+#### Response
+```json
+{
+    "done": false,
+    "metadata": {
+        "@type": "type.googleapis.com/api.v1.Operation",
+        "name": "CreateShelf",
+        "percentage": 0,
+        "stage": "PLANTING_TREE"
+    },
+    "name": "operations/shelves/shelf1"
+}
+```
+
+### Already Exists
+
+#### Response
+
+```json
+{
+  "code": 6,
+  "message": "resource already exists",
+  "details": [
+    {
+      "@type": "type.googleapis.com/google.rpc.ResourceInfo",
+      "resourceType": "operation",
+      "resourceName": "operations/shelves/shelf3",
+      "owner": "library",
+      "description": "the create shelf operation already exists"
+    }
+  ]
+}
+```
+
+
+# Get Operation
+
+Get the status of a long-running operation. Currently, only supports:
+- CreateShelf
+
+### Success
+
+#### Request
+
+```sh
+curl localhost:8081/v1/operations/shelves/shelf1
+```
+
+or
+
+```sh
+grpcurl -d '{ "name": "operations/shelves/shelf1" }' \
+    -plaintext localhost:8080 api.v1.LibraryService/GetOperation
+```
+
+#### Response
+```json
+{
+    "done": false,
+    "metadata": {
+        "@type": "type.googleapis.com/api.v1.Operation",
+        "name": "CreateShelf",
+        "percentage": 0,
+        "stage": "PLANTING_TREE"
+    },
+    "name": "operations/shelves/shelf1"
+}
+```
+
+### Finished successfully
+
+#### Response
+```json
+{
+  "name": "operations/shelves/shelf1",
+  "metadata": {
+    "@type": "type.googleapis.com/api.v1.Operation",
+    "name": "CreateShelf",
+    "stage": "FINISHED_SHELF",
+    "percentage": 100
+  },
+  "done": true,
+  "response": {
+    "@type": "type.googleapis.com/api.v1.Shelf",
+    "name": "shelves/shelf1",
+    "createTime": "2022-02-13T21:25:09.034864Z",
+    "updateTime": "2022-02-13T21:25:09.034864Z"
+  }
+}
+```
+
+### Finished with failure
+
+#### Response
+```json
+{
+  "name": "operations/shelves/shelf1",
+  "metadata": {
+    "@type": "type.googleapis.com/api.v1.Operation",
+    "name": "CreateShelf",
+    "stage": "FINISHED_SHELF",
+    "percentage": 100
+  },
+  "done": true,
+  "error": {
+    "code": 6,
+    "message": "resource already exists",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ResourceInfo",
+        "resourceType": "shelf",
+        "resourceName": "shelves/shelf1",
+        "owner": "library",
+        "description": "the shelf already exists in the library"
+      }
+    ]
+  }
+}
+```
+
+### Not Found
+
+#### Response
+
+```json
+{
+  "code": 5,
+  "message": "resource not found",
+  "details": [
+    {
+      "@type": "type.googleapis.com/google.rpc.ResourceInfo",
+      "resourceType": "operation",
+      "resourceName": "operations/shelves/shelf1",
+      "owner": "library",
+      "description": "the operation doesn't exist; is not running nor completed"
+    }
+  ]
+}
+```
