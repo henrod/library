@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Henrod/library/domain/shelves"
+
 	"github.com/Henrod/library/domain/books"
 	"github.com/Henrod/library/domain/entities"
 	v1 "github.com/Henrod/library/protogen/go/api/v1"
@@ -22,12 +24,13 @@ import (
 )
 
 type LibraryService struct {
-	listBooks  *books.ListBooksDomain
-	getBook    *books.GetBookDomain
-	createBook *books.CreateBookDomain
-	updateBook *books.UpdateBookDomain
-	deleteBook *books.DeleteBookDomain
-	log        *zap.SugaredLogger
+	listBooks   *books.ListBooksDomain
+	getBook     *books.GetBookDomain
+	createBook  *books.CreateBookDomain
+	updateBook  *books.UpdateBookDomain
+	deleteBook  *books.DeleteBookDomain
+	createShelf *shelves.CreateShelfDomain
+	log         *zap.SugaredLogger
 }
 
 func NewLibraryService(
@@ -37,14 +40,16 @@ func NewLibraryService(
 	createBook *books.CreateBookDomain,
 	updateBook *books.UpdateBookDomain,
 	deleteBook *books.DeleteBookDomain,
+	createShelf *shelves.CreateShelfDomain,
 ) *LibraryService {
 	return &LibraryService{
-		log:        log,
-		listBooks:  listBooks,
-		getBook:    getBook,
-		createBook: createBook,
-		updateBook: updateBook,
-		deleteBook: deleteBook,
+		log:         log,
+		listBooks:   listBooks,
+		getBook:     getBook,
+		createBook:  createBook,
+		updateBook:  updateBook,
+		deleteBook:  deleteBook,
+		createShelf: createShelf,
 	}
 }
 
@@ -224,6 +229,30 @@ func (l *LibraryService) DeleteBook(ctx context.Context, request *v1.DeleteBookR
 	return &emptypb.Empty{}, nil
 }
 
+func (l *LibraryService) CreateShelf(ctx context.Context, request *v1.CreateShelfRequest) (*v1.Shelf, error) {
+	inputShelf := &entities.Shelf{
+		Name:       request.GetShelf().GetName(),
+		CreateTime: time.Time{},
+		UpdateTime: time.Time{},
+	}
+
+	shelf, err := l.createShelf.CreateShelf(ctx, inputShelf)
+	if err != nil {
+		l.log.With(zap.Error(err)).Error("failed to create shelf in domain")
+
+		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
+			codes.AlreadyExists: {&errdetails.ResourceInfo{
+				ResourceType: "shelf",
+				ResourceName: request.GetShelf().GetName(),
+				Owner:        "library",
+				Description:  "the shelf already exists in library",
+			}},
+		})
+	}
+
+	return toProtoShelf(shelf), nil
+}
+
 func toProtoBook(book *entities.Book) *v1.Book {
 	return &v1.Book{
 		Name:       bookResourceName(book),
@@ -234,5 +263,17 @@ func toProtoBook(book *entities.Book) *v1.Book {
 }
 
 func bookResourceName(book *entities.Book) string {
-	return fmt.Sprintf("shelves/%s/books/%s", book.Shelf.Name, book.Name)
+	return fmt.Sprintf("%s/books/%s", shelfResourceName(book.Shelf), book.Name)
+}
+
+func toProtoShelf(shelf *entities.Shelf) *v1.Shelf {
+	return &v1.Shelf{
+		Name:       shelfResourceName(shelf),
+		CreateTime: timestamppb.New(shelf.CreateTime),
+		UpdateTime: timestamppb.New(shelf.UpdateTime),
+	}
+}
+
+func shelfResourceName(shelf *entities.Shelf) string {
+	return fmt.Sprintf("shelves/%s", shelf.Name)
 }

@@ -48,6 +48,14 @@ service LibraryService {
       delete: "/v1/{name=shelves/*/books/*}"
     };
   }
+
+  // Creates a shelf.
+  rpc CreateShelf(CreateShelfRequest) returns (Shelf) {
+    option (google.api.http) = {
+      post: "/v1/shelves"
+      body: "shelf"
+    };
+  }
 }
 
 message ListBooksRequest {
@@ -103,6 +111,11 @@ message DeleteBookRequest {
   string name = 1;
 }
 
+message CreateShelfRequest {
+  // Required. The shelf resource to create.
+  Shelf shelf = 1;
+}
+
 message Book {
   // Required. It must have less than 255 characters.
   string name = 1;
@@ -116,4 +129,16 @@ message Book {
   // Output only. Time when book was last updated in the library.
   // Equal to create_time if create request.
   google.protobuf.Timestamp update_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message Shelf {
+  // Required. It must have less than 255 characters.
+  string name = 1;
+
+  // Output only. Time when shelf was installed in the library.
+  google.protobuf.Timestamp create_time = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. Time when shelf was last updated in the library.
+  // Equal to create_time if create request.
+  google.protobuf.Timestamp update_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

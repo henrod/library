@@ -20,13 +20,13 @@ type CreateBookGateway interface {
 	CreateBook(ctx context.Context, shelfName string, book *entities.Book) (*entities.Book, error)
 }
 
-func (g *CreateBookDomain) CreateBook(
+func (c *CreateBookDomain) CreateBook(
 	ctx context.Context,
 	shelfName string,
 	inputBook *entities.Book,
 ) (*entities.Book, error) {
 	bookName := inputBook.Name
-	book, err := g.gateway.CreateBook(ctx, shelfName, inputBook)
+	book, err := c.gateway.CreateBook(ctx, shelfName, inputBook)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create book in gateway: %w", err)
 	}

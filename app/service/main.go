@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/Henrod/library/domain/shelves"
+
 	"github.com/Henrod/library/domain/books"
 	"github.com/Henrod/library/gateways/pg"
 	proto "github.com/Henrod/library/protogen/go/api/v1"
@@ -74,6 +76,7 @@ func run(sugar *zap.SugaredLogger) error {
 		books.NewCreateBookDomain(gateway),
 		books.NewUpdateBookDomain(gateway),
 		books.NewDeleteBookDomain(gateway),
+		shelves.NewCreateShelfDomain(gateway),
 	))
 
 	go func() {

@@ -11,10 +11,6 @@ import (
 	"github.com/Henrod/library/domain/entities"
 )
 
-type Shelf struct {
-	Name string `pg:",pk"`
-}
-
 type Book struct {
 	ShelfName  string `pg:",pk"`
 	Shelf      *Shelf `pg:"rel:has-one"`
@@ -24,15 +20,13 @@ type Book struct {
 	UpdateTime time.Time
 }
 
-func (b *Book) toEntitiesBook() *entities.Book {
+func (b *Book) toEntity() *entities.Book {
 	return &entities.Book{
 		Name:       b.Name,
 		Author:     b.Author,
 		CreateTime: b.CreateTime,
 		UpdateTime: b.UpdateTime,
-		Shelf: &entities.Shelf{
-			Name: b.ShelfName,
-		},
+		Shelf:      b.Shelf.toEntity(),
 	}
 }
 
@@ -52,7 +46,7 @@ func (g *Gateway) ListBooks(
 
 	eBooks := make([]*entities.Book, len(books))
 	for i, book := range books {
-		eBooks[i] = book.toEntitiesBook()
+		eBooks[i] = book.toEntity()
 	}
 
 	return eBooks, nil
@@ -76,7 +70,7 @@ func (g *Gateway) ListShelfBooks(
 
 	eBooks := make([]*entities.Book, len(books))
 	for i, book := range books {
-		eBooks[i] = book.toEntitiesBook()
+		eBooks[i] = book.toEntity()
 	}
 
 	return eBooks, nil
@@ -123,7 +117,7 @@ func (g *Gateway) GetBook(ctx context.Context, shelfName, bookName string) (*ent
 		return nil, fmt.Errorf("failed to select book in postgres: %w", err)
 	}
 
-	return book.toEntitiesBook(), nil
+	return book.toEntity(), nil
 }
 
 func (g *Gateway) CreateBook(ctx context.Context, shelfName string, eBook *entities.Book) (*entities.Book, error) {
@@ -149,7 +143,7 @@ func (g *Gateway) CreateBook(ctx context.Context, shelfName string, eBook *entit
 		return nil, fmt.Errorf("failed to insert book in postgres: %w", err)
 	}
 
-	return book.toEntitiesBook(), nil
+	return book.toEntity(), nil
 }
 
 func (g *Gateway) UpdateBook(
@@ -182,7 +176,7 @@ func (g *Gateway) UpdateBook(
 
 	// TODO: handle when shelf doesn't exist
 
-	return book.toEntitiesBook(), nil
+	return book.toEntity(), nil
 }
 func (g *Gateway) DeleteBook(ctx context.Context, shelfName, bookName string) (bool, error) {
 	book := &Book{ShelfName: shelfName, Name: bookName} //nolint:exhaustivestruct

@@ -16,6 +16,40 @@
     "application/json"
   ],
   "paths": {
+    "/v1/shelves": {
+      "post": {
+        "summary": "Creates a shelf.",
+        "operationId": "LibraryService_CreateShelf",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Shelf"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "Required. The shelf resource to create.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Shelf"
+            }
+          }
+        ],
+        "tags": [
+          "LibraryService"
+        ]
+      }
+    },
     "/v1/{book.name}": {
       "patch": {
         "summary": "Updates a book's attribute of a shelf.",
@@ -284,6 +318,27 @@
         "nextPageToken": {
           "type": "string",
           "description": "Token to retrieve the next page of results, or empty if there are no\nmore results in the list."
+        }
+      }
+    },
+    "v1Shelf": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Required. It must have less than 255 characters."
+        },
+        "createTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Time when shelf was installed in the library.",
+          "readOnly": true
+        },
+        "updateTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Output only. Time when shelf was last updated in the library.\nEqual to create_time if create request.",
+          "readOnly": true
         }
       }
     }
