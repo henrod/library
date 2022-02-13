@@ -6,16 +6,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Henrod/library/domain/shelves"
-
 	"github.com/Henrod/library/domain/books"
 	"github.com/Henrod/library/domain/entities"
+	"github.com/Henrod/library/domain/shelves"
 	v1 "github.com/Henrod/library/protogen/go/api/v1"
 	"github.com/Henrod/library/service/api"
 	"go.uber.org/zap"
+	"google.golang.org/genproto/googleapis/longrunning"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -29,6 +30,7 @@ type LibraryService struct {
 	createBook  *books.CreateBookDomain
 	updateBook  *books.UpdateBookDomain
 	deleteBook  *books.DeleteBookDomain
+	getShelf    *shelves.GetShelfDomain
 	createShelf *shelves.CreateShelfDomain
 	log         *zap.SugaredLogger
 }
@@ -40,6 +42,7 @@ func NewLibraryService(
 	createBook *books.CreateBookDomain,
 	updateBook *books.UpdateBookDomain,
 	deleteBook *books.DeleteBookDomain,
+	getShelf *shelves.GetShelfDomain,
 	createShelf *shelves.CreateShelfDomain,
 ) *LibraryService {
 	return &LibraryService{
@@ -49,6 +52,7 @@ func NewLibraryService(
 		createBook:  createBook,
 		updateBook:  updateBook,
 		deleteBook:  deleteBook,
+		getShelf:    getShelf,
 		createShelf: createShelf,
 	}
 }
@@ -229,28 +233,82 @@ func (l *LibraryService) DeleteBook(ctx context.Context, request *v1.DeleteBookR
 	return &emptypb.Empty{}, nil
 }
 
-func (l *LibraryService) CreateShelf(ctx context.Context, request *v1.CreateShelfRequest) (*v1.Shelf, error) {
+func (l *LibraryService) CreateShelf(
+	ctx context.Context,
+	request *v1.CreateShelfRequest,
+) (*longrunning.Operation, error) {
 	inputShelf := &entities.Shelf{
 		Name:       request.GetShelf().GetName(),
 		CreateTime: time.Time{},
 		UpdateTime: time.Time{},
 	}
 
-	shelf, err := l.createShelf.CreateShelf(ctx, inputShelf)
+	operation, err := l.createShelf.StartCreateShelfOperation(ctx, inputShelf)
 	if err != nil {
-		l.log.With(zap.Error(err)).Error("failed to create shelf in domain")
+		l.log.With(zap.Error(err)).Error("failed to start create shelf operation in domain")
 
 		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
 			codes.AlreadyExists: {&errdetails.ResourceInfo{
-				ResourceType: "shelf",
+				ResourceType: "operation",
 				ResourceName: request.GetShelf().GetName(),
 				Owner:        "library",
-				Description:  "the shelf already exists in library",
+				Description:  "the create shelf operation already exists",
 			}},
 		})
 	}
 
-	return toProtoShelf(shelf), nil
+	return toLongRunningOperation("CreateShelf", operation), nil
+}
+
+func (l *LibraryService) GetOperation(
+	ctx context.Context,
+	request *v1.GetOperationRequest,
+) (*longrunning.Operation, error) {
+	parts := strings.Split(request.GetName(), "/")
+	// assume only long-running operation is CreateShelf.
+	// request.name = operations/shelves/{shelf_name}
+	if len(parts) != 3 {
+		err := status.Errorf(codes.InvalidArgument, "operation name must be of format 'operations/shelves/*'")
+
+		return nil, fmt.Errorf("failed to get operation: %w", err)
+	}
+
+	shelfName := parts[len(parts)-1]
+	longRunningOperationName := "CreateShelf"
+
+	operation, err := l.createShelf.GetOperation(shelfName)
+	if err != nil {
+		return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
+			codes.NotFound: {&errdetails.ResourceInfo{
+				ResourceType: "operation",
+				ResourceName: request.GetName(),
+				Owner:        "library",
+				Description:  "the operation doesn't exist; is not running nor completed",
+			}},
+		})
+	}
+
+	return toLongRunningOperation(longRunningOperationName, operation), nil
+
+	//shelf, err := l.getShelf.GetShelf(ctx, shelfName)
+	//if err != nil {
+	//	l.log.With(zap.Error(err)).Error("failed to get shelf in domain")
+	//
+	//	return nil, api.GRPCError(err, api.Details{ //nolint:wrapcheck
+	//		codes.NotFound: {&errdetails.ResourceInfo{
+	//			ResourceType: "operation",
+	//			ResourceName: request.GetName(),
+	//			Owner:        "library",
+	//			Description:  "the operation doesn't exist; is not running nor completed",
+	//		}},
+	//	})
+	//}
+	//
+	//longRunningOperation := toLongRunningOperation(longRunningOperationName, operation)
+	//response, _ := anypb.New(toProtoShelf(shelf))
+	//longRunningOperation.Result = &longrunning.Operation_Response{Response: response}
+	//
+	//return longRunningOperation, nil
 }
 
 func toProtoBook(book *entities.Book) *v1.Book {
@@ -267,6 +325,10 @@ func bookResourceName(book *entities.Book) string {
 }
 
 func toProtoShelf(shelf *entities.Shelf) *v1.Shelf {
+	if shelf == nil {
+		return nil
+	}
+
 	return &v1.Shelf{
 		Name:       shelfResourceName(shelf),
 		CreateTime: timestamppb.New(shelf.CreateTime),
@@ -276,4 +338,36 @@ func toProtoShelf(shelf *entities.Shelf) *v1.Shelf {
 
 func shelfResourceName(shelf *entities.Shelf) string {
 	return fmt.Sprintf("shelves/%s", shelf.Name)
+}
+
+func toLongRunningOperation(name string, operation *entities.Operation) *longrunning.Operation {
+	metadata, _ := anypb.New(&v1.Operation{
+		Name:       name,
+		Stage:      operation.Stage,
+		Percentage: uint32(operation.Percentage),
+	})
+
+	longRunningOperation := &longrunning.Operation{
+		Name:     operation.Name,
+		Metadata: metadata,
+		Done:     false,
+		Result:   nil,
+	}
+
+	if operation.Error != nil {
+		err := api.GRPCError(operation.Error, api.Details{
+			codes.AlreadyExists: {&errdetails.ResourceInfo{
+				ResourceType: "shelf",
+				ResourceName: operation.ResourceName(),
+				Owner:        "library",
+				Description:  "the shelf already exists in the library",
+			}},
+		})
+
+		longRunningOperation.Result = &longrunning.Operation_Error{
+			Error: status.Convert(err).Proto(),
+		}
+	}
+
+	return longRunningOperation
 }

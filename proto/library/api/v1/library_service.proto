@@ -9,6 +9,7 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/empty.proto";
+import "google/longrunning/operations.proto";
 
 // Manages books of a digital library.
 service LibraryService {
@@ -49,11 +50,19 @@ service LibraryService {
     };
   }
 
-  // Creates a shelf.
-  rpc CreateShelf(CreateShelfRequest) returns (Shelf) {
+  // Starts a long running operation to create a shelf.
+  rpc CreateShelf(CreateShelfRequest) returns (google.longrunning.Operation) {
     option (google.api.http) = {
       post: "/v1/shelves"
       body: "shelf"
+    };
+  }
+
+  // Gets the latest state of a long-running operation.  Clients can use this
+  // method to poll the operation result.
+  rpc GetOperation(GetOperationRequest) returns (google.longrunning.Operation) {
+    option (google.api.http) = {
+      get: "/v1/{name=operations/**}"
     };
   }
 }
@@ -116,6 +125,11 @@ message CreateShelfRequest {
   Shelf shelf = 1;
 }
 
+message GetOperationRequest {
+  // The name of the operation resource.
+  string name = 1;
+}
+
 message Book {
   // Required. It must have less than 255 characters.
   string name = 1;
@@ -141,4 +155,15 @@ message Shelf {
   // Output only. Time when shelf was last updated in the library.
   // Equal to create_time if create request.
   google.protobuf.Timestamp update_time = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message Operation {
+  // Output only. Name of the operation, which indicates what the operation is doing.
+  string name = 1;
+
+  // Output only. In which stage the operation is currently in.
+  string stage = 2;
+
+  // Output only. Related to stage, how much of the operation has been executed already.
+  uint32 percentage = 3;
 }

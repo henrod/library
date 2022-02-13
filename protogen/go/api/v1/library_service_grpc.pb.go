@@ -8,6 +8,7 @@ package v1
 
 import (
 	context "context"
+	longrunning "google.golang.org/genproto/googleapis/longrunning"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -33,8 +34,11 @@ type LibraryServiceClient interface {
 	UpdateBook(ctx context.Context, in *UpdateBookRequest, opts ...grpc.CallOption) (*Book, error)
 	// Remove a book from the shelf.
 	DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Creates a shelf.
-	CreateShelf(ctx context.Context, in *CreateShelfRequest, opts ...grpc.CallOption) (*Shelf, error)
+	// Starts a long running operation to create a shelf.
+	CreateShelf(ctx context.Context, in *CreateShelfRequest, opts ...grpc.CallOption) (*longrunning.Operation, error)
+	// Gets the latest state of a long-running operation.  Clients can use this
+	// method to poll the operation result.
+	GetOperation(ctx context.Context, in *GetOperationRequest, opts ...grpc.CallOption) (*longrunning.Operation, error)
 }
 
 type libraryServiceClient struct {
@@ -90,9 +94,18 @@ func (c *libraryServiceClient) DeleteBook(ctx context.Context, in *DeleteBookReq
 	return out, nil
 }
 
-func (c *libraryServiceClient) CreateShelf(ctx context.Context, in *CreateShelfRequest, opts ...grpc.CallOption) (*Shelf, error) {
-	out := new(Shelf)
+func (c *libraryServiceClient) CreateShelf(ctx context.Context, in *CreateShelfRequest, opts ...grpc.CallOption) (*longrunning.Operation, error) {
+	out := new(longrunning.Operation)
 	err := c.cc.Invoke(ctx, "/api.v1.LibraryService/CreateShelf", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *libraryServiceClient) GetOperation(ctx context.Context, in *GetOperationRequest, opts ...grpc.CallOption) (*longrunning.Operation, error) {
+	out := new(longrunning.Operation)
+	err := c.cc.Invoke(ctx, "/api.v1.LibraryService/GetOperation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +126,11 @@ type LibraryServiceServer interface {
 	UpdateBook(context.Context, *UpdateBookRequest) (*Book, error)
 	// Remove a book from the shelf.
 	DeleteBook(context.Context, *DeleteBookRequest) (*emptypb.Empty, error)
-	// Creates a shelf.
-	CreateShelf(context.Context, *CreateShelfRequest) (*Shelf, error)
+	// Starts a long running operation to create a shelf.
+	CreateShelf(context.Context, *CreateShelfRequest) (*longrunning.Operation, error)
+	// Gets the latest state of a long-running operation.  Clients can use this
+	// method to poll the operation result.
+	GetOperation(context.Context, *GetOperationRequest) (*longrunning.Operation, error)
 }
 
 // UnimplementedLibraryServiceServer should be embedded to have forward compatible implementations.
@@ -136,8 +152,11 @@ func (UnimplementedLibraryServiceServer) UpdateBook(context.Context, *UpdateBook
 func (UnimplementedLibraryServiceServer) DeleteBook(context.Context, *DeleteBookRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteBook not implemented")
 }
-func (UnimplementedLibraryServiceServer) CreateShelf(context.Context, *CreateShelfRequest) (*Shelf, error) {
+func (UnimplementedLibraryServiceServer) CreateShelf(context.Context, *CreateShelfRequest) (*longrunning.Operation, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateShelf not implemented")
+}
+func (UnimplementedLibraryServiceServer) GetOperation(context.Context, *GetOperationRequest) (*longrunning.Operation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOperation not implemented")
 }
 
 // UnsafeLibraryServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -259,6 +278,24 @@ func _LibraryService_CreateShelf_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LibraryService_GetOperation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOperationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LibraryServiceServer).GetOperation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.LibraryService/GetOperation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LibraryServiceServer).GetOperation(ctx, req.(*GetOperationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LibraryService_ServiceDesc is the grpc.ServiceDesc for LibraryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -289,6 +326,10 @@ var LibraryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateShelf",
 			Handler:    _LibraryService_CreateShelf_Handler,
+		},
+		{
+			MethodName: "GetOperation",
+			Handler:    _LibraryService_GetOperation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

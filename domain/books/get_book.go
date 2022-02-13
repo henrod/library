@@ -36,6 +36,7 @@ func (g *GetBookDomain) GetBook(ctx context.Context, shelfName, bookName string)
 	return &entities.Book{
 		Name:       book.Name,
 		Author:     book.Author,
+		Shelf:      book.Shelf,
 		CreateTime: book.CreateTime,
 		UpdateTime: book.UpdateTime,
 	}, nil
